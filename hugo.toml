@@ -1,0 +1,40 @@
+baseURL = "https://arjunkul.com/"
+languageCode = "en-us"
+title = "Arjun Kulothungun"
+theme = "hugo-bearblog"
+author = "Arjun Kulothungun"
+copyright = "Copyright © 2026, Arjun Kulothungun."
+enableRobotsTXT = true
+
+[params]
+  author = "Arjun Kulothungun"
+  description = "Notes on engineering, data, and things I'm learning."
+  title = "Arjun Kulothungun"
+  enablePostNavigator = true
+  dateFormat = "Jan 2, 2006"
+
+[menus]
+  [[menus.main]]
+    name = "Home"
+    pageRef = "/"
+    weight = 10
+  [[menus.main]]
+    name = "Posts"
+    pageRef = "/posts"
+    weight = 20
+  [[menus.main]]
+    name = "About"
+    pageRef = "/about"
+    weight = 30
+
+[markup]
+  [markup.highlight]
+    style = "friendly"
+    lineNos = true
+    lineNumbersInTable = false
+    codeFences = true
+  [markup.goldmark.renderer]
+    unsafe = false
+
+[outputs]
+  home = ["HTML", "RSS"]
