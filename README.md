@@ -1,6 +1,6 @@
 # arjunkul.github.io
 
-A small personal blog built with [Hugo](https://gohugo.io/) and the [Hugo Bear Blog](https://github.com/janraasch/hugo-bearblog) theme.
+A small personal blog built with [Hugo](https://gohugo.io/) and the [Cactus](https://github.com/iahsanujunda/hugo-theme-cactus) theme.
 
 Clone the theme submodule along with the repository:
 
@@ -10,9 +10,10 @@ git clone --recurse-submodules https://github.com/arjunkul/arjunkul.github.io.gi
 
 ## Run locally
 
-Install Hugo, then start the development server:
+Install Hugo extended 0.158.0 or newer and Dart Sass, then start the development server:
 
 ```sh
+npm install -g sass@1.97.1
 hugo server -D
 ```
 
@@ -25,6 +26,21 @@ hugo new content posts/my-post.md
 ```
 
 Edit the generated Markdown file, add `type: blog` to its front matter, and set `draft: false` when it is ready.
+
+## Add a diagram
+
+Use a fenced `mermaid` block in any post:
+
+````markdown
+```mermaid
+flowchart LR
+    Demand --> Matching
+    Supply --> Matching
+    Matching --> Ads
+```
+````
+
+The diagram is rendered in the browser and matches the configured Cactus color scheme.
 
 ## Publish
 

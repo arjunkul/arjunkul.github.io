@@ -1,7 +1,7 @@
 baseURL = "https://arjunkul.com/"
 languageCode = "en-us"
 title = "Arjun Kulothungun"
-theme = "hugo-bearblog"
+theme = "cactus"
 author = "Arjun Kulothungun"
 copyright = "Copyright © 2026, Arjun Kulothungun."
 enableRobotsTXT = true
@@ -10,8 +10,17 @@ enableRobotsTXT = true
   author = "Arjun Kulothungun"
   description = "Notes on engineering, data, and things I'm learning."
   title = "Arjun Kulothungun"
-  enablePostNavigator = true
   dateFormat = "Jan 2, 2006"
+  colorscheme = "dark"
+  pageWidth = 48
+  direction = "ltr"
+  rss = true
+
+  [params.postsOverview]
+    showAllPosts = true
+
+  [params.copyright]
+    startYear = 2026
 
 [menus]
   [[menus.main]]
