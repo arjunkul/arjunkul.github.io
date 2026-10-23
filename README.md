@@ -13,7 +13,7 @@ git clone --recurse-submodules https://github.com/arjunkul/arjunkul.github.io.gi
 Install Hugo extended 0.158.0 or newer and Dart Sass, then start the development server:
 
 ```sh
-npm install -g sass@1.97.1
+brew install dart-sass
 hugo server -D
 ```
 
