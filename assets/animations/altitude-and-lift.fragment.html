@@ -1,0 +1,71 @@
+<div id="altitude-lift">
+  <h2>Same plane. Thinner air.</h2>
+  <div class="viz-controls">
+    <label class="form-label" for="lift-speed">True airspeed · <span id="lift-speed-value" class="tabular-nums">15 m/s</span><input id="lift-speed" class="form-range" type="range" min="15" max="45" step="0.5" value="15"></label>
+    <label class="form-label" for="lift-alt">High runway elevation · <span id="lift-alt-value" class="tabular-nums">3,000 m</span><input id="lift-alt" class="form-range" type="range" min="1000" max="5000" step="100" value="3000"></label>
+  </div>
+  <div id="lift-stage" role="img" aria-label="Two planes at the same true airspeed, with equal-sized dots whose number per unit area is proportional to air density, lift and weight arrows to the left, and a height-above-runway marker to the right. Height is illustrative and is zero at runway level. The thinner air at the higher runway generates less lift. Each runway distance counter freezes at liftoff and resets when acceleration is replayed."></div>
+  <div class="viz-row"><button type="button" class="btn" id="lift-pause">Pause</button><button type="button" class="btn" id="lift-demo">Animate acceleration</button><span class="text-small" id="lift-status" aria-live="polite"></span></div>
+  <div class="text-small" style="margin-top:12px">Idealized · 1,000 kg · wing 16 m² · fixed lift coefficient 1.2 · standard atmosphere · dot density ∝ air density · height and motion schematic · height measured above runway · no wind · distance since start/replay</div>
+</div>
+<style>#altitude-lift{width:100%}#altitude-lift #lift-stage{width:100%;margin:12px 0}#altitude-lift canvas{display:block;max-width:100%}</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+<script>
+(()=>{
+ const root=document.getElementById('altitude-lift'),speed=root.querySelector('#lift-speed'),alt=root.querySelector('#lift-alt'),status=root.querySelector('#lift-status');
+ let v=15,h=3000,running=!matchMedia('(prefers-reduced-motion: reduce)').matches,demo=false,t=0,airOffset=0,colors={},lifts=[0,0],runwayDistance=[0,0],liftedOff=[false,false];
+ const rho=z=>1.225*Math.pow(1-0.0065*z/288.15,4.25588),weight=9810;
+ function advanceRunway(dt,previousSpeed,currentSpeed){
+   for(let i=0;i<2;i++){
+     if(liftedOff[i])continue;
+     const threshold=Math.sqrt(2*weight/(rho(i?h:0)*16*1.2));
+     if(previousSpeed>=threshold){liftedOff[i]=true;continue;}
+     const fraction=currentSpeed>=threshold?(threshold-previousSpeed)/(currentSpeed-previousSpeed):1;
+     const endSpeed=previousSpeed+(currentSpeed-previousSpeed)*fraction;
+     runwayDistance[i]+=(previousSpeed+endSpeed)*0.5*dt*fraction;
+     if(currentSpeed>=threshold)liftedOff[i]=true;
+   }
+ }
+ function save(){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{trueAirspeed:v,highRunwayMetres:h},privateContent:{running}}).catch(()=>{});}
+ function apply(s){const m=s?.modelContent;if(m){v=Math.max(15,Math.min(45,Number(m.trueAirspeed)||32));h=Math.max(1000,Math.min(5000,Number(m.highRunwayMetres)||3000));}if(typeof s?.privateContent?.running==='boolean')running=s.privateContent.running;sync();}
+ function sync(){speed.value=v;alt.value=h;root.querySelector('#lift-speed-value').textContent=v.toFixed(1)+' m/s';root.querySelector('#lift-alt-value').textContent=h.toLocaleString()+' m';root.querySelector('#lift-pause').textContent=running?'Pause':'Play';const a=Math.sqrt(2*weight/(rho(0)*16*1.2)),b=Math.sqrt(2*weight/(rho(h)*16*1.2));status.textContent='Lift = weight at '+a.toFixed(1)+' m/s low · '+b.toFixed(1)+' m/s high';}
+ speed.oninput=()=>{v=+speed.value;demo=false;sync();save();};alt.oninput=()=>{h=+alt.value;sync();save();};root.querySelector('#lift-pause').onclick=()=>{running=!running;sync();save();};root.querySelector('#lift-demo').onclick=()=>{v=15;demo=true;running=true;runwayDistance=[0,0];liftedOff=[false,false];lifts=[0,0];t=0;airOffset=0;sync();save();};
+ apply(window.openai?.widgetState);window.addEventListener('openai:set_globals',e=>{if(e.detail?.globals?.widgetState)apply(e.detail.globals.widgetState);});
+ function theme(){const probe=document.createElement('span');root.appendChild(probe);for(const [key,token] of Object.entries({fg:'--foreground',muted:'--muted-foreground',line:'--border',surface:'--muted',one:'--viz-series-1',two:'--viz-series-2',bg:'--background'})){probe.style.color='var('+token+')';colors[key]=getComputedStyle(probe).color;}probe.remove();}
+ new p5(p=>{
+ let host=root.querySelector('#lift-stage'),observer;
+ p.setup=()=>{p.createCanvas(host.clientWidth,460).parent(host);p.pixelDensity(Math.min(devicePixelRatio,2));theme();observer=new ResizeObserver(()=>{p.resizeCanvas(host.clientWidth,460);theme();});observer.observe(host);};
+ function arrow(x,y,dy,c,label){p.stroke(c);p.strokeWeight(2);p.line(x,y,x,y+dy);p.line(x,y+dy,x-4,y+dy-Math.sign(dy)*7);p.line(x,y+dy,x+4,y+dy-Math.sign(dy)*7);p.noStroke();p.fill(colors.fg);p.text(label,x+9,y+dy+4);}
+ function plane(x,y,c,tilt){p.push();p.translate(x,y);p.rotate(tilt);p.stroke(colors.fg);p.strokeWeight(1.2);p.fill(c);p.beginShape();p.vertex(-58,0);p.vertex(-67,-24);p.vertex(-53,-24);p.vertex(-35,-4);p.vertex(28,-6);p.bezierVertex(42,-6,57,1,59,6);p.vertex(-55,9);p.endShape(p.CLOSE);p.fill(colors.bg);p.beginShape();p.vertex(-5,1);p.vertex(-31,23);p.vertex(-13,23);p.vertex(18,1);p.endShape(p.CLOSE);p.line(30,-5,36,1);p.line(-40,9,-40,16);p.line(32,9,32,16);p.fill(colors.fg);p.circle(-40,17,6);p.circle(32,17,6);p.pop();}
+ function lane(i,z){const top=i*230,c=i?colors.two:colors.one,d=rho(z),L=.5*d*v*v*16*1.2,ratio=L/weight,ground=top+190;
+ p.noStroke();p.fill(colors.fg);p.textAlign(p.LEFT);p.text((i?'HIGH ALTITUDE':'LOW ALTITUDE')+' · '+z.toLocaleString()+' m',12,top+19);p.fill(colors.muted);p.text('Air density '+d.toFixed(3)+' kg/m³',12,top+39);
+ p.fill(colors.fg);p.textAlign(p.RIGHT);p.text((ratio>1?'LIFT > WEIGHT':'LIFT < WEIGHT'),p.width-12,top+19);p.text((L/1000).toFixed(1)+' kN / 9.8 kN',p.width-12,top+39);p.textAlign(p.LEFT);
+ const target=ratio>1?Math.min(65,(ratio-1)*180+15):0;lifts[i]=p.lerp(lifts[i],target,running?.035:1);const x=p.width*.48,y=ground-20-lifts[i];
+ p.stroke(colors.line);p.strokeWeight(1);p.line(0,ground,p.width,ground);p.noStroke();
+ p.fill(colors.muted);for(let n=0;n<10;n++){const xx=((n*90-t*v*2)%(p.width+90)+p.width+90)%(p.width+90)-45;p.rect(xx,ground+12,28,2);}
+ // Equal-sized fields and identical dots: only dot count encodes density.
+ const fieldHeight=128,seaLevelCount=Math.round(p.width*fieldHeight/520);
+ const count=Math.round(seaLevelCount*d/rho(0));
+ const core=p.color(colors.fg),halo=p.color(colors.fg);core.setAlpha(100);halo.setAlpha(13);
+ p.noStroke();
+ for(let n=0;n<count;n++){
+   // A stable low-discrepancy pattern avoids clumps and obvious rows.
+   const u=((n+1)*0.7548776662466927)%1,w=((n+1)*0.5698402909980532)%1;
+   const xx=((u*p.width-airOffset)%p.width+p.width)%p.width;
+   const yy=top+54+w*fieldHeight;
+   p.fill(halo);p.circle(xx,yy,6);
+   p.fill(core);p.circle(xx,yy,2.6);
+ }
+ plane(x,y,c,ratio>1?-.07:0);
+ const ax=x-124;arrow(ax,y,-ratio*18,c,'Lift');arrow(ax,y,18,colors.muted,'Weight');
+ const altitudeX=x+77,altitudeY=ground-lifts[i];
+ p.stroke(colors.muted);p.strokeWeight(1);p.line(altitudeX-5,ground,altitudeX+5,ground);
+ if(lifts[i]>1){p.line(altitudeX,ground,altitudeX,altitudeY);p.line(altitudeX,altitudeY,altitudeX-4,altitudeY+6);p.line(altitudeX,altitudeY,altitudeX+4,altitudeY+6);}
+ p.noStroke();p.fill(colors.fg);p.textAlign(p.LEFT);p.text(Math.round(lifts[i]).toLocaleString()+' m',altitudeX+9,altitudeY-17);p.fill(colors.muted);p.text('above runway',Math.min(altitudeX+9,p.width-p.textWidth('above runway')-8),altitudeY-2);
+ const distanceLabel='Runway distance: '+Math.round(runwayDistance[i]).toLocaleString()+' m'+(liftedOff[i]?' · frozen at liftoff':'');
+ p.noStroke();p.fill('#facc15');p.rect(6,ground+20,p.textWidth(distanceLabel)+12,20,3);p.fill('#25200a');p.text(distanceLabel,12,ground+35);
+ }
+ p.draw=()=>{if(running){const dt=Math.min(p.deltaTime/1000,.05),previousSpeed=v;t+=dt;if(demo){v=Math.min(45,v+dt*2.5);sync();if(v===45){demo=false;save();}}airOffset+=dt*(previousSpeed+v)*1.5;advanceRunway(dt,previousSpeed,v);}if(p.frameCount%60===0)theme();p.clear();p.textFont(getComputedStyle(root).fontFamily);p.textSize(parseFloat(getComputedStyle(root).fontSize)*.86);lane(0,0);lane(1,h);};
+ });
+})();
+</script>
