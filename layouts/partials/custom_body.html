@@ -1,4 +1,16 @@
 <style>
+  article.post header .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .25rem .75rem;
+  }
+
+  article.post header .meta .article-tag::before,
+  article.post header .meta .article-category::before {
+    margin-inline-end: .75rem;
+  }
+
   pre.mermaid { overflow-x: auto; padding: 1rem 0; background: transparent; text-align: center; }
   pre.mermaid svg { max-width: 100%; height: auto; }
 </style>
