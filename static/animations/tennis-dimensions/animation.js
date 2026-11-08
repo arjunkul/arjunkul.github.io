@@ -171,7 +171,6 @@
     const stage=time<13?0:time<35?1:2;
     if(stage!==currentStage){
       currentStage=stage;$('dimension').textContent=`${stage+1}D`;$('caption').textContent=captions[stage];
-      document.querySelectorAll('[data-stage]').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===stage)));
     }
     const active=events.find(e=>time>=e.t&&time<e.t+3);
     $('focus-item').textContent=active?data[active.a].labels[active.i].join(' ').replace('- ','-'):time>=77?'Technique. Competition. Mindset.':time>=35&&time<38?'Opening a third dimension…':time>=13&&time<16?'Opening a second dimension…':'Your thinking gains dimensions.';
@@ -194,9 +193,6 @@
   $('play').addEventListener('click',()=>{if(playing){stop();render();}else{if(time>=duration || firstPlay)time=0;firstPlay=false;start();}});
   $('replay').addEventListener('click',()=>{stop();firstPlay=false;time=0;start();});
   $('timeline').addEventListener('input',event=>{stop();firstPlay=false;time=Number(event.target.value)*playbackRate;render();});
-  document.querySelectorAll('[data-stage]').forEach(button=>button.addEventListener('click',()=>{
-    stop();firstPlay=false;time=[12.5,34.5,duration][Number(button.dataset.stage)];render();
-  }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();render();}});
   reduced.addEventListener('change',()=>{if(reduced.matches){stop();time=duration;render();}});
   // Start with a useful first stage; play tells the complete story from its beginning.
