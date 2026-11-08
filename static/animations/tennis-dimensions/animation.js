@@ -64,7 +64,7 @@
   const extent=full.vectors.map((v,a)=>v.map(n=>n*(distance(a,data[a].labels.length-1)+25)));
   const top=Math.min(0,full.origin[1]+extent[1][1]+extent[2][1]-65);
   full.view=[-240,top,Math.max(1200,full.origin[0]+extent[0][0]+extent[1][0]+100)+240,
-    Math.max(800,full.origin[1]+extent[0][1]+220)-top];
+    Math.max(800,full.origin[1]+extent[0][1]+550)-top];
   let layouts=[];
   function measureLayouts(){
     const rect=svg.getBoundingClientRect();
@@ -75,23 +75,57 @@
       const fontSize=Math.max(16,13/Math.max(.15,scale));
       const axisSize=Math.max(12,11/Math.max(.15,scale));
       svg.style.setProperty('--label-size',`${fontSize}px`);
+      svg.style.setProperty('--axis-size',`${axisSize}px`);
       const positions=data.map(()=>[]),placed=[];
+      const gap=6/scale;
+      const bounds={left:stage.view[0]+gap,right:stage.view[0]+stage.view[2]-gap,
+        top:stage.view[1]+gap,bottom:stage.view[1]+stage.view[3]-gap};
+      const shafts=stage.counts.map((count,a)=>[stage.origin,add(stage.origin,stage.vectors[a],count?distance(a,count-1)+25:0)]);
+      const titles=shafts.map(([_,end],a)=>a===0?[end[0]-4,end[1]+(stage===full?330:185)]:a===1?[end[0]+16,end[1]-20]:[end[0]-18,end[1]-fontSize*2.5]);
+      function rectangle(box,lx,ly){return {left:lx+box.x,right:lx+box.x+box.width,top:ly+box.y,bottom:ly+box.y+box.height};}
+      const overlaps=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
+      function crossesAxis(box,[start,end]){
+        let low=0,high=1;
+        for(let d=0;d<2;d++){
+          const delta=end[d]-start[d],min=(d?box.top:box.left)-gap,max=(d?box.bottom:box.right)+gap;
+          if(Math.abs(delta)<.0001){if(start[d]<min||start[d]>max)return false;}
+          else{const a=(min-start[d])/delta,b=(max-start[d])/delta;low=Math.max(low,Math.min(a,b));high=Math.min(high,Math.max(a,b));if(low>high)return false;}
+        }
+        return true;
+      }
+      // Titles are fixed per stage and reserve space before item labels are placed.
+      axes.forEach((axis,a)=>{
+        axis.title.setAttribute('text-anchor',a===1?'start':'end');
+        axis.title.setAttribute('x',0);axis.title.setAttribute('y',0);
+        if(stage.counts[a])placed.push(rectangle(axis.title.getBBox(),...titles[a]));
+      });
       for(const a of [2,1,0]){
         axes[a].markers.forEach((m,i)=>{
           const p=add(stage.origin,stage.vectors[a],distance(a,i));
-          let [lx,ly]=a===0?[p[0],p[1]+35+(i%3)*48]:[p[0]-20,p[1]-(a===1?10:6)];
+          const base=a===0?[p[0],p[1]+35+(i%3)*48]:[p[0]-20,p[1]-(a===1?10:6)];
           m.label.setAttribute('text-anchor',a===0?'middle':'end');
+          let position=base;
           if(i<stage.counts[a]){
-            const box=m.label.getBBox();
-            const intersects=b=>lx+box.x<b.right+8&&lx+box.x+box.width>b.left-8&&ly+box.y<b.bottom+8&&ly+box.y+box.height>b.top-8;
-            let tries=0;
-            while(placed.some(intersects)&&tries++<30)ly+=a===0?fontSize*1.3:-fontSize*1.3;
-            placed.push({left:lx+box.x,right:lx+box.x+box.width,top:ly+box.y,bottom:ly+box.y+box.height});
+            const box=m.label.getBBox(),candidates=[];
+            for(let row=0;row<24;row++)for(let col=0;col<13;col++){
+              const dx=a===1?col*fontSize:((col%2?1:-1)*Math.ceil(col/2)*fontSize*.5);
+              const dy=(a===0?1:-1)*row*fontSize*.7;
+              candidates.push({position:[base[0]+dx,base[1]+dy],cost:dx*dx+dy*dy});
+            }
+            candidates.sort((a,b)=>a.cost-b.cost);
+            const chosen=candidates.find(candidate=>{
+              const r=rectangle(box,...candidate.position);
+              return r.left>=bounds.left&&r.right<=bounds.right&&r.top>=bounds.top&&r.bottom<=bounds.bottom
+                &&!placed.some(other=>overlaps(r,other))
+                &&!shafts.some((shaft,b)=>stage.counts[b]&&crossesAxis(r,shaft));
+            });
+            if(chosen)position=chosen.position;
+            placed.push(rectangle(box,...position));
           }
-          positions[a][i]=[lx,ly];
+          positions[a][i]=position;
         });
       }
-      return {positions,fontSize,axisSize};
+      return {positions,titles,fontSize,axisSize};
     });
   }
   let time = 0, playing = false, last = 0, frame = 0, currentStage = -1;
@@ -118,8 +152,9 @@
       line(axis.shaft,origin,end);
       const back = add(end,vec,-9), normal = [-vec[1],vec[0]];
       axis.arrow.setAttribute('points',[add(back,normal,4),end,add(back,normal,-4)].map(p=>p.join(',')).join(' '));
-      axis.title.setAttribute('x',a===0?end[0]-4:a===1?end[0]+16:end[0]-18);
-      axis.title.setAttribute('y',a===0?end[1]+185:a===1?end[1]-20:end[1]-16);
+      const titlePos=between(between(layouts[0].titles[a],layouts[1].titles[a],plane),layouts[2].titles[a],space);
+      axis.title.setAttribute('x',titlePos[0]);
+      axis.title.setAttribute('y',titlePos[1]);
       axis.title.setAttribute('text-anchor',a===1?'start':'end');
       axis.markers.forEach((m,i) => {
         const opacity = ease((time-m.time)/2.7);
