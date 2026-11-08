@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Becoming a Great Tennis Player</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="animation.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">The expanding athlete</p>
+    <h1>Becoming a Great <br>Tennis Player</h1>
+    <p class="intro">Your thinking gains dimensions.</p>
+  </header>
+  <nav aria-label="Animation stages">
+    <button data-stage="0" aria-pressed="true"><span>01 / A line</span>Technique</button>
+    <button data-stage="1" aria-pressed="false"><span>02 / A plane</span>Competition</button>
+    <button data-stage="2" aria-pressed="false"><span>03 / A space</span>Mindset</button>
+  </nav>
+  <section class="scene" aria-label="Animated dimensions of tennis development" tabindex="0">
+    <svg viewBox="0 0 1200 800" role="img" aria-labelledby="scene-title scene-desc">
+      <title id="scene-title">From technique to competition to mindset</title>
+      <desc id="scene-desc">A technique axis grows into a competition plane, then a three-dimensional space including mindset. Earlier skills remain visible as new dimensions appear. The complete list follows the playback controls.</desc>
+      <g id="plane"></g><g id="volume"></g><g id="axes"></g><g id="markers"></g>
+      <circle id="origin" r="5"></circle>
+    </svg>
+  </section>
+  <p id="focus-item" aria-live="off">Your thinking gains dimensions.</p>
+  <div class="caption" aria-live="polite"><span id="dimension">1D</span><p id="caption">Learn the actions. Build your technical vocabulary.</p></div>
+  <div class="playback">
+    <button id="play" class="primary">Play animation</button>
+    <button id="replay" aria-label="Replay from the beginning">Replay</button>
+    <label for="timeline" class="sr-only">Animation progress in seconds</label>
+    <input id="timeline" type="range" min="0" max="13" step="0.05" value="0">
+    <output id="time" for="timeline">0.0s / 13.0s · 6×</output>
+  </div>
+  <footer><p>Growth adds dimensions. It never leaves the fundamentals behind.</p>
+    <details><summary>Explore the dimensions</summary><div class="dimensions">
+      <section><h2>Technique · x</h2><p>Ready position, rules, forehand, backhand, return of serve, serve, volley, footwork, shot selection, spin, point construction.</p></section>
+      <section><h2>Competition · y</h2><p>Playing a match, tournaments, longer-range prep, nationals, friends and competitors, doubles, equipment.</p></section>
+      <section><h2>Mindset · z</h2><p>Staying calm when trailing, reading the opponent, visualization, handling losses, handling wins.</p></section>
+    </div></details>
+    <p class="note">Areas of awareness, not a prescribed learning order. Mental skills and equipment matter from the beginning.</p>
+  </footer>
+</main>
+</body>
+</html>
