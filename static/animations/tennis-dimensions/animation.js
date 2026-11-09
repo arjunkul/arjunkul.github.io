@@ -20,6 +20,7 @@
     {name:'COMPETITION / y', color:'var(--y)', labels:[['Playing a match'],['Tournaments'],['Longer-range prep'],['Nationals'],['Friends and','competitors'],['Doubles'],['Equipment']], times:[16,19,22,47,50,53,56]},
     {name:'MINDSET / z', color:'var(--z)', labels:[['Staying calm','when trailing'],['Reading the','opponent'],['Visualization'],['Handling losses'],['Handling wins']], times:[38,41,44,71,74]}
   ];
+  const labelAngles=[60,55,0];
   const duration = 78;
   const playbackRate = 6;
   const events = data.flatMap((d,a) => d.times.map((t,i)=>({t,a,i}))).sort((a,b)=>a.t-b.t);
@@ -34,7 +35,8 @@
       const leader = create('line', {class:'leader'}, g);
       const point = create('circle', {r:4,class:'point',fill:d.color}, g);
       const label = create('text', {}, g);
-      words.forEach((word, j) => {const span = create('tspan', {x:0,dy:j ? '1.2em' : 0}, label); span.textContent=word;});
+      if(a<2)label.textContent=words.join(' ');
+      else words.forEach((word, j) => {const span = create('tspan', {x:0,dy:j ? '1.2em' : 0}, label); span.textContent=word;});
       return {g,leader,point,label,time:d.times[i],event:events.findIndex(e=>e.a===a&&e.i===i)};
     });
     return {group,shaft,arrow,title,markers};
@@ -77,21 +79,35 @@
       svg.style.setProperty('--label-size',`${fontSize}px`);
       svg.style.setProperty('--axis-size',`${axisSize}px`);
       const positions=data.map(()=>[]),placed=[];
-      const gap=6/scale;
+      const gap=4/scale;
       const bounds={left:stage.view[0]+gap,right:stage.view[0]+stage.view[2]-gap,
         top:stage.view[1]+gap,bottom:stage.view[1]+stage.view[3]-gap};
       const shafts=stage.counts.map((count,a)=>[stage.origin,add(stage.origin,stage.vectors[a],count?distance(a,count-1)+25:0)]);
       const titles=shafts.map(([_,end],a)=>a===0?[end[0]-4,end[1]+(stage===full?330:185)]:a===1?[end[0]+16,end[1]-20]:[end[0]-18,end[1]-fontSize*2.5]);
-      function rectangle(box,lx,ly){return {left:lx+box.x,right:lx+box.x+box.width,top:ly+box.y,bottom:ly+box.y+box.height};}
-      const overlaps=(a,b)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
-      function crossesAxis(box,[start,end]){
-        let low=0,high=1;
-        for(let d=0;d<2;d++){
-          const delta=end[d]-start[d],min=(d?box.top:box.left)-gap,max=(d?box.bottom:box.right)+gap;
-          if(Math.abs(delta)<.0001){if(start[d]<min||start[d]>max)return false;}
-          else{const a=(min-start[d])/delta,b=(max-start[d])/delta;low=Math.max(low,Math.min(a,b));high=Math.min(high,Math.max(a,b));if(low>high)return false;}
+      function rectangle(box,lx,ly,angle=0){
+        const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians);
+        const points=[[box.x,box.y],[box.x+box.width,box.y],[box.x+box.width,box.y+box.height],[box.x,box.y+box.height]]
+          .map(([x,y])=>[lx+x*c-y*s,ly+x*s+y*c]);
+        return {points,left:Math.min(...points.map(p=>p[0])),right:Math.max(...points.map(p=>p[0])),
+          top:Math.min(...points.map(p=>p[1])),bottom:Math.max(...points.map(p=>p[1]))};
+      }
+      // Compare rotated text polygons, not their overly large bounding rectangles.
+      function overlaps(a,b){
+        for(const polygon of [a.points,b.points])for(let i=0;i<polygon.length;i++){
+          const p=polygon[i],q=polygon[(i+1)%polygon.length],length=Math.hypot(q[0]-p[0],q[1]-p[1]);
+          if(!length)continue;
+          const normal=[-(q[1]-p[1])/length,(q[0]-p[0])/length];
+          const pa=a.points.map(p=>p[0]*normal[0]+p[1]*normal[1]);
+          const pb=b.points.map(p=>p[0]*normal[0]+p[1]*normal[1]);
+          if(Math.max(...pa)+gap<=Math.min(...pb)||Math.max(...pb)+gap<=Math.min(...pa))return false;
         }
         return true;
+      }
+      function crossesAxis(box,[start,end]){
+        const dx=end[0]-start[0],dy=end[1]-start[1],length=Math.hypot(dx,dy);
+        if(!length)return false;
+        const n=[-dy/length,dx/length];
+        return overlaps(box,{points:[add(start,n),add(end,n),add(end,n,-1),add(start,n,-1)]});
       }
       // Titles are fixed per stage and reserve space before item labels are placed.
       axes.forEach((axis,a)=>{
@@ -102,8 +118,8 @@
       for(const a of [2,1,0]){
         axes[a].markers.forEach((m,i)=>{
           const p=add(stage.origin,stage.vectors[a],distance(a,i));
-          const base=a===0?[p[0],p[1]+35+(i%3)*48]:[p[0]-20,p[1]-(a===1?10:6)];
-          m.label.setAttribute('text-anchor',a===0?'middle':'end');
+          const base=a===0?[p[0]+8,p[1]+26]:[p[0]-20,p[1]-(a===1?18:6)];
+          m.label.setAttribute('text-anchor',a===0?'start':'end');
           let position=base;
           if(i<stage.counts[a]){
             const box=m.label.getBBox(),candidates=[];
@@ -114,13 +130,13 @@
             }
             candidates.sort((a,b)=>a.cost-b.cost);
             const chosen=candidates.find(candidate=>{
-              const r=rectangle(box,...candidate.position);
+              const r=rectangle(box,...candidate.position,labelAngles[a]);
               return r.left>=bounds.left&&r.right<=bounds.right&&r.top>=bounds.top&&r.bottom<=bounds.bottom
                 &&!placed.some(other=>overlaps(r,other))
                 &&!shafts.some((shaft,b)=>stage.counts[b]&&crossesAxis(r,shaft));
             });
             if(chosen)position=chosen.position;
-            placed.push(rectangle(box,...position));
+            placed.push(rectangle(box,...position,labelAngles[a]));
           }
           positions[a][i]=position;
         });
@@ -166,9 +182,10 @@
         m.label.style.fill=color;m.point.style.fill=color;
         m.point.setAttribute('cx',p[0]);m.point.setAttribute('cy',p[1]);
         const labelPos=between(between(layouts[0].positions[a][i],layouts[1].positions[a][i],plane),layouts[2].positions[a][i],space);
-        line(m.leader,p,[labelPos[0]+(a===0?0:8),labelPos[1]-fontSize*.35]);
-        m.label.setAttribute('transform',`translate(${labelPos.join(' ')})`);
-        m.label.setAttribute('text-anchor',a===0?'middle':'end');
+        const radians=labelAngles[a]*Math.PI/180;
+        line(m.leader,p,[labelPos[0]+Math.sin(radians)*fontSize*.3,labelPos[1]-Math.cos(radians)*fontSize*.3]);
+        m.label.setAttribute('transform',`translate(${labelPos.join(' ')}) rotate(${labelAngles[a]})`);
+        m.label.setAttribute('text-anchor',a===0?'start':'end');
       });
     });
     const vx=x.map(v=>v*lengths[0]), vy=y.map(v=>v*lengths[1]), vz=z.map(v=>v*lengths[2]);
